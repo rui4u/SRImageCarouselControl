@@ -13,6 +13,8 @@
 @interface SRImageCarouselControl ()<UIScrollViewDelegate>
 
 @property (nonatomic ,assign ) CGFloat lastConOffsetX;
+
+@property (nonatomic ,assign ) CGFloat targetContentOffsetX;
 @property (nonatomic ,strong ) NSMutableArray <UIButton *> *contentViewButtonArray ;
 @property (nonatomic ,strong ) NSMutableArray<ButtonFrameModel *> *contentViewButtonRect ;
 
@@ -26,9 +28,8 @@
 	if (self) {
 		self.bounces = NO;
 		self.bouncesZoom = NO;
-		self.decelerationRate = 0.1;
 		self.delegate = self;
-		self.showsHorizontalScrollIndicator = NO;
+		self.decelerationRate = 0.001;
 		_cusPagingEnabled = YES;
 	}
 	
@@ -62,7 +63,7 @@
 		
 		[button setBackgroundImage:[UIImage imageNamed:@"circle_round"] forState:UIControlStateNormal];
 		button.userInteractionEnabled = NO;
-		[button setTitle:[NSString stringWithFormat:@"%d",i % 10] forState:UIControlStateNormal];
+		[button setTitle:[NSString stringWithFormat:@"%d",i ] forState:UIControlStateNormal];
 		[self addSubview:button];
 		[self.contentViewButtonArray addObject:button];
 		ButtonFrameModel * buttonModel = [[ButtonFrameModel alloc] init];
@@ -72,11 +73,16 @@
 	self.contentSize = CGSizeMake(CGRectGetMaxX(self.contentViewButtonArray.lastObject.frame), 0);
 	
 	dispatch_async(dispatch_get_main_queue(), ^{
-		[self setContentOffset:CGPointMake(Margin +(FirstButtonWidth - ButtonWidth )+ (ButtonWidth  + Margin)* 2* self.dataSourse.count - ButtonWidth, 0) animated:YES];;
+		[self setContentOffset:CGPointMake(- Margin +(FirstButtonWidth - ButtonWidth )+ (ButtonWidth  + Margin)* 2* self.dataSourse.count - ButtonWidth, 0) animated:YES];;
 	});
 }
 
 - (void)layoutSubviews {
+	
+	if(abs((int)(self.contentOffset.x - self.lastConOffsetX))>30) {
+		self.contentOffset = CGPointMake(self.lastConOffsetX, 0);
+		return;
+	}
 	
 	if (self.contentOffset.x > Margin + (FirstButtonWidth - ButtonWidth )+ (ButtonWidth  + Margin)* 3 * self.dataSourse.count - [UIScreen mainScreen].bounds.size.width) {
 		self.contentOffset = CGPointMake(Margin + (FirstButtonWidth - ButtonWidth )+ (ButtonWidth  + Margin)* 2 * self.dataSourse.count - [UIScreen mainScreen].bounds.size.width, 0);
@@ -90,13 +96,13 @@
 	NSLog(@"%f",self.contentOffset.x);
 	NSLog(@"%d",(int)self.contentOffset.x /(int)(Margin + ButtonWidth));
 	
-	int index = (int)self.contentOffset.x /(int)(Margin + ButtonWidth);
+	int index = (floor)(self.contentOffset.x /(Margin + ButtonWidth));
 	
 	for (int i = 0; i <self.contentViewButtonRect.count; i ++) {
 		
 		if (i != index && (i !=(index + 1))) {
 			
-			if (i <index) {
+			if (i <=index) {
 				UIButton * btn = [self.contentViewButtonArray objectAtIndex:i];
 				btn.frame = self.contentViewButtonRect[i].buttonFrame;
 				btn.x = btn.x - (FirstButtonWidth - ButtonWidth);
@@ -156,8 +162,8 @@
 }
 
 - (void)scrollViewWillEndDragging:(UIScrollView *)scrollView withVelocity:(CGPoint)velocity targetContentOffset:(inout CGPoint *)targetContentOffset {
-		[self autoScrollToEndPoint];
 	
+		[self autoScrollToEndPoint];
 }
 - (void)scrollViewDidEndDecelerating:(UIScrollView *)scrollView {
 	[self autoScrollToEndPoint];
@@ -167,9 +173,11 @@
 - (void)autoScrollToEndPoint {
 	if (self.cusPagingEnabled) {
 		float a = self.contentOffset.x / (Margin + ButtonWidth);
-		[self setContentOffset:CGPointMake((Margin + ButtonWidth)* floor(a) - LeftMargin, 0) animated:YES];
+		[self setContentOffset:CGPointMake((Margin + ButtonWidth)* round(a) - LeftMargin, 0) animated:YES];
 	}
 }
+
+
 
 
 - (NSMutableArray <UIButton *>*)contentViewButtonArray {
